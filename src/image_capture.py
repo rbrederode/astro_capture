@@ -26,7 +26,7 @@ def callback(level, domain, string, data=None):
         print('Callback: level =', level, ', domain =', domain, ', string =', string)
         if data:
             print('Callback data:', data)
-        raise Exception("Callback invoked")
+
 
 # search for processes containing gphoto2 and kill them
 # the python gphoto2 library cannot get access to the camera otherwise
@@ -72,12 +72,22 @@ def captureFrame(camera):
 
 def saveCameraFile(camera, path, target, retries=10, delay=1):
 	folder, name = os.path.split(path)
+	file_types = [gp.GP_FILE_TYPE_RAW, gp.GP_FILE_TYPE_NORMAL]
+	if hasattr(gp, 'GP_FILE_TYPE_AUTO'):
+		file_types.insert(0, gp.GP_FILE_TYPE_AUTO)
 
 	for attempt in range(retries):
 		try:
-			camera_file = camera.file_get(folder, name, gp.GP_FILE_TYPE_NORMAL)
-			camera_file.save(target)
-			return
+			last_error = None
+			for file_type in file_types:
+				try:
+					camera_file = camera.file_get(folder, name, file_type)
+					camera_file.save(target)
+					return
+				except gp.GPhoto2Error as e:
+					last_error = e
+			if attempt == retries - 1:
+				raise last_error
 		except gp.GPhoto2Error as e:
 			if attempt == retries - 1:
 				raise
