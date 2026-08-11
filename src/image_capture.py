@@ -275,8 +275,13 @@ def getShutterSpeeds(camera):
 			numerator = float(fraction[0])
 			denominator = float(fraction[1])
 			speed = numerator / denominator
+		elif choice.lower() == 'bulb':
+			continue
 		else:
-			speed = float(choice)
+			try:
+				speed = float(choice)
+			except ValueError:
+				continue
 
 		speeds.insert(i,speed)
 		
