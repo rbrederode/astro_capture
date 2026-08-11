@@ -20,7 +20,7 @@ frame_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 picID = 'PI %y-%m-%d %H:%M:%S'
 
 folder_name = frame_date
-save_location = "/home/rbrederode/Desktop/gphoto/images/" + folder_name
+save_location = "~/Desktop/gphoto/images/" + folder_name
 
 def callback(level, domain, string, data=None):
         print('Callback: level =', level, ', domain =', domain, ', string =', string)
