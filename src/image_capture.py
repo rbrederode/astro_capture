@@ -322,7 +322,7 @@ def main(argv):
 			print('\b\n Usage: image_capture.py -h <help> -s <shutterspeed> -f <frames> -l <label> -c\b\n' + \
 			'\b\n [-s] Shutterspeed (seconds) e.g. 30' + \
 			'\b\n [-f] Number of frames to take e.g. 1' + \
-			'\b\n [-l] Label to name image files e.g. Light\Dark\Bias etc' + \
+			'\b\n [-l] Label to name image files e.g. Light/Dark/Bias etc' + \
 			'\b\n [-i] ISO setting on camera e.g. 800' + \
 			'\b\n [-c] Print the camera configuration to stdout')
 			sys.exit()
