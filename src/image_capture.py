@@ -435,10 +435,14 @@ if __name__ == "__main__":
 					break
 			
 			setConfigValue(camera,'shutterspeed',choice)
-			captureFrame(camera)
+			file_path = captureFrame(camera)
 			sleep(2) # give some time to record the file
+			target = os.path.join(save_location, label+"_"+file_path.name)
+			print('Copying frame to', target)
+			saveCameraFile(camera, os.path.join(file_path.folder, file_path.name), target)
 
-	uploadCameraFiles(camera)
+	if autoexposuremode.upper() == 'BULB':
+		uploadCameraFiles(camera)
 	deleteAllCameraFiles(camera)
 
 	# uninstall callback
