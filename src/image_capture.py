@@ -67,6 +67,22 @@ def captureFrame(camera):
 	file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
 	return file_path
 	
+# downloads a single file from the camera, retrying while the camera is
+# still finishing the write after capture
+
+def saveCameraFile(camera, path, target, retries=10, delay=1):
+	folder, name = os.path.split(path)
+
+	for attempt in range(retries):
+		try:
+			camera_file = camera.file_get(folder, name, gp.GP_FILE_TYPE_NORMAL)
+			camera_file.save(target)
+			return
+		except gp.GPhoto2Error as e:
+			if attempt == retries - 1:
+				raise
+			sleep(delay)
+
 # upload all files to the host
 
 def uploadCameraFiles(camera):
@@ -78,8 +94,7 @@ def uploadCameraFiles(camera):
 		folder, name = os.path.split(path)
 		target = os.path.join(save_location, label+"_"+name)
 		print('Copying frame to', target)
-		camera_file = camera.file_get(folder, name, gp.GP_FILE_TYPE_NORMAL)
-		camera_file.save(target)
+		saveCameraFile(camera, path, target)
 	
 	return len(files)
 	
@@ -99,8 +114,7 @@ def uploadLatestFile(camera):
 		print('Camera file path: {0}/{1}'.format(folder, name))
 		target = os.path.join(save_location, label+"_"+name)
 		print('Copying frame to', target)
-		camera_file = camera.file_get(folder, name, gp.GP_FILE_TYPE_NORMAL)
-		camera_file.save(target)
+		saveCameraFile(camera, path, target)
 		return path
 	
 # captures a bulb frame and transfers it to the host
