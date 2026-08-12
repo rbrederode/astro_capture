@@ -104,6 +104,22 @@ def captureFrame(camera):
 	print('Capturing frame')
 	file_path = camera.capture(gp.GP_CAPTURE_IMAGE)
 	return file_path
+
+
+def waitForCapturedFile(camera, file_path, timeout_seconds=60):
+	deadline = datetime.now() + timedelta(seconds=timeout_seconds)
+	while datetime.now() < deadline:
+		try:
+			getFileInfo(camera, os.path.join(file_path.folder, file_path.name))
+			return
+		except gp.GPhoto2Error:
+			pass
+		try:
+			camera.wait_for_event(1000)
+		except gp.GPhoto2Error:
+			pass
+		sleep(1)
+	raise RuntimeError('Timed out waiting for captured file '+os.path.join(file_path.folder, file_path.name))
 	
 # downloads a single file from the camera, retrying while the camera is
 # still finishing the write after capture
@@ -487,7 +503,7 @@ if __name__ == "__main__":
 			
 			setConfigValue(camera,'shutterspeed',choice)
 			file_path = captureFrame(camera)
-			sleep(2) # give some time to record the file
+			waitForCapturedFile(camera, file_path)
 			target = os.path.join(save_location, label+"_"+file_path.name)
 			print('Copying frame to', target)
 			saveCameraFile(camera, os.path.join(file_path.folder, file_path.name), target)
