@@ -25,9 +25,11 @@ folder_name = frame_date
 save_location = os.path.expanduser("~/Desktop/gphoto/images/" + folder_name)
 
 def callback(level, domain, string, data=None):
-        print('Callback: level =', level, ', domain =', domain, ', string =', string)
-        if data:
-            print('Callback data:', data)
+	if domain == 'gp_camera_file_get' and "gp_filesystem_get_file (camera->fs, folder, file, type, camera_file, context)' failed: -1" in string:
+		return
+	print('Callback: level =', level, ', domain =', domain, ', string =', string)
+	if data:
+		print('Callback data:', data)
 
 
 def parseInterval(value):
