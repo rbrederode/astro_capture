@@ -108,23 +108,31 @@ def captureFrame(camera):
 
 def waitForCapturedFile(camera, file_path, timeout_seconds=60):
 	deadline = datetime.now() + timedelta(seconds=timeout_seconds)
+	full_path = os.path.join(file_path.folder, file_path.name)
 	while datetime.now() < deadline:
 		try:
-			getFileInfo(camera, os.path.join(file_path.folder, file_path.name))
-			return
-		except gp.GPhoto2Error:
-			pass
-		try:
-			camera.wait_for_event(1000)
+			event_type, event_data = camera.wait_for_event(1000)
+			if event_type == gp.GP_EVENT_FILE_ADDED:
+				try:
+					added_folder = event_data.folder
+					added_name = event_data.name
+					if os.path.join(added_folder, added_name) == full_path:
+						sleep(5)
+						return
+				except AttributeError:
+					pass
+			elif event_type == gp.GP_EVENT_CAPTURE_COMPLETE:
+				sleep(5)
+				return
 		except gp.GPhoto2Error:
 			pass
 		sleep(1)
-	raise RuntimeError('Timed out waiting for captured file '+os.path.join(file_path.folder, file_path.name))
+	raise RuntimeError('Timed out waiting for captured file '+full_path)
 	
 # downloads a single file from the camera, retrying while the camera is
 # still finishing the write after capture
 
-def saveCameraFile(camera, path, target, retries=10, delay=1):
+def saveCameraFile(camera, path, target, retries=30, delay=2):
 	folder, name = os.path.split(path)
 	file_types = [gp.GP_FILE_TYPE_RAW, gp.GP_FILE_TYPE_NORMAL]
 	if hasattr(gp, 'GP_FILE_TYPE_AUTO'):
