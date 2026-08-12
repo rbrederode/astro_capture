@@ -14,6 +14,8 @@ frames = 1			# one frame
 label = 'Test'		# test frame by default
 config = False		# print camera config
 iso = -1			# iso not set
+relative_delay = None	# delay between frames in seconds
+absolute_period = None	# absolute frame boundary period in seconds
 
 frame_date = datetime.now().strftime('%Y-%m-%d')
 frame_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -26,6 +28,42 @@ def callback(level, domain, string, data=None):
         print('Callback: level =', level, ', domain =', domain, ', string =', string)
         if data:
             print('Callback data:', data)
+
+
+def parseInterval(value):
+	text = value.strip().lower()
+	if text.endswith('s'):
+		return float(text[:-1])
+	if text.endswith('m'):
+		return float(text[:-1]) * 60.0
+	return float(text)
+
+
+def waitUntil(target_time):
+	while True:
+		remaining = (target_time - datetime.now()).total_seconds()
+		if remaining <= 0:
+			return
+		sleep(min(remaining, 1.0))
+
+
+def getNextAbsoluteBoundary(period_seconds, reference_time=None):
+	if reference_time is None:
+		reference_time = datetime.now()
+	epoch = datetime(1970, 1, 1)
+	elapsed = (reference_time - epoch).total_seconds()
+	next_tick = (int(elapsed // period_seconds) + 1) * period_seconds
+	return epoch + timedelta(seconds=next_tick)
+
+
+def waitForFrameTiming(frame_index):
+	if absolute_period:
+		target_time = getNextAbsoluteBoundary(absolute_period)
+		print('Waiting for absolute boundary at '+target_time.strftime('%Y-%m-%d %H:%M:%S'))
+		waitUntil(target_time)
+	elif relative_delay and frame_index > 0:
+		print('Waiting '+str(relative_delay)+'s before next frame')
+		sleep(relative_delay)
 
 
 # search for processes containing gphoto2 and kill them
@@ -338,22 +376,26 @@ def main(argv):
 	global label
 	global config
 	global iso
+	global relative_delay
+	global absolute_period
 	
 	# retrieve command line arguments
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],"hs:f:l:i:c",["help","shutterspeed", "frames", "label", "iso", "config"])
+		opts, args = getopt.getopt(sys.argv[1:],"hs:f:l:i:c:r:a:",["help","shutterspeed", "frames", "label", "iso", "config", "relative=", "absolute="])
 	except getopt.GetoptError as err:
 		print(err)
-		print('Usage: image_capture.py -hc -s <shutterspeed> -f <frames> -l <label> -i <iso>')
+		print('Usage: image_capture.py -h -s <shutterspeed> -f <frames> -l <label> -i <iso> -r <delay> -a <period>')
       
 	for ou, arg in opts:
 		if ou in ("-h","--help"):
-			print('\b\n Usage: image_capture.py -h <help> -s <shutterspeed> -f <frames> -l <label> -c\b\n' + \
+			print('\b\n Usage: image_capture.py -h <help> -s <shutterspeed> -f <frames> -l <label> -c -r <delay> -a <period>\b\n' + \
 			'\b\n [-s] Shutterspeed (seconds) e.g. 30' + \
 			'\b\n [-f] Number of frames to take e.g. 1' + \
 			'\b\n [-l] Label to name image files e.g. Light/Dark/Bias etc' + \
 			'\b\n [-i] ISO setting on camera e.g. 800' + \
-			'\b\n [-c] Print the camera configuration to stdout')
+			'\b\n [-c] Print the camera configuration to stdout' + \
+			'\b\n [-r] Relative delay between frames, e.g. 5s or 1m' + \
+			'\b\n [-a] Absolute frame period, aligned to wall-clock boundaries, e.g. 1m or 5m')
 			sys.exit()
 		elif ou in ("-s", "--shutterspeed"):
 			shutterspeed = float(arg)
@@ -365,6 +407,14 @@ def main(argv):
 			config = True
 		elif ou in ("-i", "--iso"):
 			iso = int(arg)
+		elif ou in ("-r", "--relative"):
+			relative_delay = parseInterval(arg)
+		elif ou in ("-a", "--absolute"):
+			absolute_period = parseInterval(arg)
+
+	if relative_delay is not None and absolute_period is not None:
+		print('Specify only one of -r/--relative or -a/--absolute')
+		sys.exit(1)
         
 	return
 
@@ -374,7 +424,7 @@ if __name__ == "__main__":
 
 	sy = main(sys.argv[2:])
 	
-	print("\b\n Shutterspeed={0} frames={1} label={2} config={3} iso={4}".format(shutterspeed,frames,label,config,iso))
+	print("\b\n Shutterspeed={0} frames={1} label={2} config={3} iso={4} relative_delay={5} absolute_period={6}".format(shutterspeed,frames,label,config,iso,relative_delay,absolute_period))
 	
 	# kill gphoto2 processes that will prevent access to the gphoto library
 	killgphoto2Process()
@@ -418,6 +468,7 @@ if __name__ == "__main__":
 	
 	# repeat 'frames' times
 	for f in range(frames):
+		waitForFrameTiming(f)
 		
 		if autoexposuremode.upper() == 'BULB':
 			captureBulbFrame(camera)
